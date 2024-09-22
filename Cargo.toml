@@ -9,3 +9,6 @@ readme = "README.md"
 
 [dependencies]
 bytes = "1.7.1"
+
+[dev-dependencies]
+mse_fmp4 = { git = "https://github.com/wavey-ai/mse_fmp4.git" }
