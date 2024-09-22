@@ -5,6 +5,7 @@ pub mod flac;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AudioType {
+    Unkownn,
     AAC,
     FLAC,
     Opus,
@@ -25,4 +26,14 @@ pub struct AccessUnit {
     pub dts: u64,
     pub data: Bytes,
     pub avc: bool,
+}
+
+pub fn detect_audio(data: &[u8]) -> AudioType {
+    if aac::is_aac(data) {
+        AudioType::AAC
+    } else if flac::is_flac(data) {
+        AudioType::FLAC
+    } else {
+        AudioType::Unkownn
+    }
 }

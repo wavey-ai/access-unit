@@ -53,6 +53,15 @@ const FLAC_SAMPLE_RATE_TABLE: [u32; 12] = [
     0, 88200, 176400, 192000, 8000, 16000, 22050, 24000, 32000, 44100, 48000, 96000,
 ];
 
+pub fn is_flac(input: &[u8]) -> bool {
+    let mut reader = BitReader::new(input);
+
+    match reader.read(15) {
+        Ok(b) => b == 0x7FFC,
+        Err(_) => false,
+    }
+}
+
 pub fn decode_frame_header(input: &[u8]) -> Result<FLACFrameInfo, FLACError> {
     let mut reader = BitReader::new(input);
     let mut fi = FLACFrameInfo::default();

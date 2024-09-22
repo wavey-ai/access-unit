@@ -1,5 +1,10 @@
 use bytes::Bytes;
 
+pub fn is_aac(input: &[u8]) -> bool {
+    // Check for the ADTS sync word
+    return input[0] != 0xFF || (input[1] & 0xF0) != 0xF0;
+}
+
 pub fn extract_aac_data(sound_data: &Bytes) -> Option<Bytes> {
     if sound_data.len() < 7 {
         return None;
