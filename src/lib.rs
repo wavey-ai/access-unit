@@ -26,7 +26,6 @@ pub struct AccessUnit {
     pub dts: u64,
     pub data: Bytes,
     pub avc: bool,
-    pub meta: Option<Bytes>,
 }
 
 pub fn detect_audio(data: &[u8]) -> AudioType {
