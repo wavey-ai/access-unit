@@ -29,10 +29,10 @@ pub struct AccessUnit {
 }
 
 pub fn detect_audio(data: &[u8]) -> AudioType {
-    if aac::is_aac(data) {
-        AudioType::AAC
-    } else if flac::is_flac(data) {
+    if flac::is_flac(data) {
         AudioType::FLAC
+    } else if aac::is_aac(data) {
+        AudioType::AAC
     } else {
         AudioType::Unkownn
     }
