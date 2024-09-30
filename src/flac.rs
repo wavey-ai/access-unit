@@ -111,6 +111,9 @@ pub fn decode_frame_header(input: &[u8]) -> Result<FLACFrameInfo, FLACError> {
         0 => return Err(FLACError::ReservedBlocksizeCode),
         6 => reader.read(8)? as u16 + 1,
         7 => reader.read(16)? as u16 + 1,
+        13 => (reader.read(8)? as u16 * 8) + 1,
+        14 => reader.read(16)? as u16 + 1,
+        15 => reader.read(16)? as u16 * 256 + 1,
         _ => FLAC_BLOCKSIZE_TABLE[bs_code as usize],
     };
 
