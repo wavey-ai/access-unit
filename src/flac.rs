@@ -138,16 +138,11 @@ pub fn decode_frame_header(input: &[u8]) -> Result<FLACFrameInfo, FLACError> {
 
 fn read_utf8(reader: &mut BitReader) -> Result<u64, FLACError> {
     let mut value = 0u64;
-    let mut shift = 0;
 
     loop {
         let byte = reader.read(8)? as u8;
-        if shift == 36 && byte & 0xF8 != 0 {
-            return Err(FLACError::UTF8DecodingError);
-        }
-        value |= ((byte & 0x7F) as u64) << shift;
-        shift += 7;
-        if byte & 0x80 == 0 {
+        value = (value << 7) | ((byte & 0x7F) as u64);
+        if (byte & 0x80) == 0 {
             break;
         }
     }
