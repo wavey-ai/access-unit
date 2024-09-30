@@ -1,8 +1,40 @@
 use bytes::{Bytes, BytesMut};
 
 pub fn is_aac(input: &[u8]) -> bool {
-    // Check for the ADTS sync word
-    return input[0] == 0xFF || (input[1] & 0xF0) == 0xF0;
+    // Check if we have at least 7 bytes (minimum ADTS header size)
+    if input.len() < 7 {
+        return false;
+    }
+
+    // Check for the ADTS sync word (12 bits)
+    if input[0] != 0xFF || (input[1] & 0xF0) != 0xF0 {
+        return false;
+    }
+
+    // Check MPEG version (1 bit) and layer (2 bits)
+    let mpeg_version = (input[1] & 0x08) >> 3;
+    let layer = (input[1] & 0x06) >> 1;
+    if layer != 0 {
+        // Layer must be '00' for AAC
+        return false;
+    }
+
+    // Check profile (2 bits)
+    let profile = (input[2] & 0xC0) >> 6;
+    if profile == 3 {
+        // '11' is reserved
+        return false;
+    }
+
+    // Check sampling frequency index (4 bits)
+    let sampling_freq_index = (input[2] & 0x3C) >> 2;
+    if sampling_freq_index > 11 {
+        // Valid range is 0-11
+        return false;
+    }
+
+    // All checks passed
+    true
 }
 
 pub fn extract_aac_data(sound_data: &Bytes) -> Option<Bytes> {
