@@ -11,8 +11,6 @@ pub fn is_aac(input: &[u8]) -> bool {
         return false;
     }
 
-    // Check MPEG version (1 bit) and layer (2 bits)
-    let mpeg_version = (input[1] & 0x08) >> 3;
     let layer = (input[1] & 0x06) >> 1;
     if layer != 0 {
         // Layer must be '00' for AAC

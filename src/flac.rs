@@ -266,8 +266,6 @@ pub fn create_streaminfo(frame_info: &FLACFrameInfo) -> Vec<u8> {
 }
 
 mod tests {
-    use super::*;
-    use std::char::decode_utf16;
     use std::fs::File;
     use std::io::Read;
 
