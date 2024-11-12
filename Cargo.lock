@@ -18,9 +18,9 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
-version = "1.7.2"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
+checksum = "9ac0150caa2ae65ca5bd83f25c7de183dea78d4d366469f148435e2acfbad0da"
 
 [[package]]
 name = "mpeg2ts"
@@ -35,7 +35,7 @@ dependencies = [
 [[package]]
 name = "mse_fmp4"
 version = "0.2.0"
-source = "git+https://github.com/wavey-ai/mse_fmp4.git#238ff37d6b83380b370905342d015375bda66608"
+source = "git+ssh://git@github.com/wavey-ai/mse_fmp4.git#238ff37d6b83380b370905342d015375bda66608"
 dependencies = [
  "byteorder",
  "bytes",
@@ -45,9 +45,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.86"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
+checksum = "f139b0662de085916d1fb67d2b4169d1addddda1919e696f3252b740b629986e"
 dependencies = [
  "unicode-ident",
 ]
