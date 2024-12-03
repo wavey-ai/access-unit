@@ -87,7 +87,7 @@ pub fn ensure_adts_header(data: Bytes, channels: u8, sample_rate: u32) -> Bytes 
     return data;
 }
 
-fn create_adts_header(
+pub fn create_adts_header(
     codec_id: u8,
     channels: u8,
     sample_rate: u32,
