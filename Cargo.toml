@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "Minimal structs and helpers for working with audio and video byte streams"
-repository = "ssh://git@github.com/wavey-ai/access-unit"
+repository = "https://github.com/wavey-ai/access-unit"
 readme = "README.md"
 
 [dependencies]
