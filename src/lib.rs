@@ -2,6 +2,7 @@ use bytes::Bytes;
 
 pub mod aac;
 pub mod flac;
+pub mod h264;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AudioType {
