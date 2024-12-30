@@ -26,7 +26,7 @@ pub struct AccessUnit {
     pub pts: u64,
     pub dts: u64,
     pub data: Bytes,
-    pub avc: bool,
+    pub stream_type: u8,
     pub id: u64,
 }
 
