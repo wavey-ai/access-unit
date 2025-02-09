@@ -1,6 +1,7 @@
 use bytes::Bytes;
 
 pub mod aac;
+pub mod chunk;
 pub mod flac;
 pub mod h264;
 
