@@ -1,10 +1,10 @@
-struct LpChunkIter<'a> {
+pub struct LpChunkIter<'a> {
     data: &'a [u8],
     pos: usize,
 }
 
 impl<'a> LpChunkIter<'a> {
-    fn new(data: &'a [u8]) -> Self {
+    pub fn new(data: &'a [u8]) -> Self {
         Self { data, pos: 0 }
     }
 }
