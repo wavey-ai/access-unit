@@ -5,6 +5,13 @@ pub mod chunk;
 pub mod flac;
 pub mod h264;
 
+pub const PSI_STREAM_MP3: u8 = 0x04; // ISO/IEC 13818-3 Audio
+pub const PSI_STREAM_PRIVATE_DATA: u8 = 0x06;
+pub const PSI_STREAM_H264: u8 = 0x1b; // H.264
+pub const PSI_STREAM_AAC: u8 = 0x0f;
+pub const PSI_STREAM_MPEG4_AAC: u8 = 0x1c;
+pub const PSI_STREAM_AUDIO_OPUS: u8 = 0x9c;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AudioType {
     Unknown,
