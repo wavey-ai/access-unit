@@ -57,6 +57,13 @@ pub fn is_flac(input: &[u8]) -> bool {
     if input.len() < 2 {
         return false;
     }
+
+    // FLAC stream marker
+    if input.starts_with(b"fLaC") {
+        return true;
+    }
+
+    // Raw frame sync code
     input[0] == 0xFF && input[1] == 0xF8
 }
 

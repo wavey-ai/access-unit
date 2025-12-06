@@ -4,9 +4,10 @@ A Rust library for handling audio codec frames, with support for AAC and FLAC fo
 
 ## Features
 
-- Automatic audio codec detection (AAC, FLAC)
+- Automatic audio codec detection (AAC, FLAC, MP3) including MP4 container audio detection
 - AAC ADTS frame handling and validation
 - FLAC frame parsing and manipulation
+- MP3 frame header parsing and detection
 - Support for FMP4 container format
 - Access Unit abstraction for media streaming
 
@@ -29,6 +30,12 @@ A Rust library for handling audio codec frames, with support for AAC and FLAC fo
 - UTF-8 coded sample/frame numbers
 - CRC validation
 
+### MP3 Support
+
+- Frame header validation (sync, version, layer, bitrate, sample rate)
+- Frame length calculation
+- Frame detection within arbitrary byte streams
+
 ## Usage
 
 ### Detecting Audio Type
@@ -42,8 +49,23 @@ let audio_type = detect_audio(data);
 match audio_type {
     AudioType::AAC => println!("AAC audio detected"),
     AudioType::FLAC => println!("FLAC audio detected"),
+    AudioType::MP3 => println!("MP3 audio detected"),
     AudioType::Unknown => println!("Unknown audio format"),
     _ => println!("Other format")
+}
+```
+
+### Detecting MP4 Container Audio
+
+```rust
+use audio_codec_handler::mp4;
+
+let data: &[u8] = // MP4 data
+
+if mp4::is_mp4(data) {
+    if let Some(audio_type) = mp4::detect_audio_track(data) {
+        println!("Audio track codec: {:?}", audio_type);
+    }
 }
 ```
 
@@ -82,6 +104,16 @@ let frame = flac::extract_flac_frame(data);
 
 // Create STREAMINFO metadata block
 let streaminfo = flac::create_streaminfo(&frame_info);
+```
+
+### MP3 Frame Detection
+
+```rust
+use audio_codec_handler::mp3;
+
+if let Some((offset, header)) = mp3::find_frame(data) {
+    println!("Found MP3 frame at offset {} with length {}", offset, header.frame_length);
+}
 ```
 
 ### Access Unit Handling
