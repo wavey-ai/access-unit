@@ -20,7 +20,9 @@ pub enum AudioType {
     AAC,
     FLAC,
     MP3,
+    OggOpus,
     Opus,
+    Wav,
 }
 
 #[derive(Debug, Clone)]
@@ -48,11 +50,43 @@ pub fn detect_audio(data: &[u8]) -> AudioType {
         AudioType::FLAC
     } else if aac::is_aac(data) {
         AudioType::AAC
+    } else if is_ogg_opus(data) {
+        AudioType::OggOpus
+    } else if is_opus(data) {
+        AudioType::Opus
+    } else if is_wav(data) {
+        AudioType::Wav
     } else if mp3::is_mp3(data) {
         AudioType::MP3
     } else {
         AudioType::Unknown
     }
+}
+
+fn is_wav(data: &[u8]) -> bool {
+    data.len() >= 12 && &data[0..4] == b"RIFF" && &data[8..12] == b"WAVE"
+}
+
+fn is_opus(data: &[u8]) -> bool {
+    if data.starts_with(b"OggS") {
+        return false;
+    }
+
+    let search_len = data.len().min(64);
+    data[..search_len]
+        .windows(b"OpusHead".len())
+        .any(|w| w == b"OpusHead")
+}
+
+fn is_ogg_opus(data: &[u8]) -> bool {
+    if data.len() < 36 || !data.starts_with(b"OggS") {
+        return false;
+    }
+    // Look for the Opus ID header within the first page payload
+    let search_len = data.len().min(256);
+    data[..search_len]
+        .windows(b"OpusHead".len())
+        .any(|w| w == b"OpusHead")
 }
 
 #[cfg(test)]
@@ -90,5 +124,23 @@ mod tests {
     fn detect_mp4_audio_from_testdata() {
         let data = read("testdata/mp4/heat.mp4");
         assert_eq!(detect_audio(&data), AudioType::AAC);
+    }
+
+    #[test]
+    fn detect_wav_from_testdata() {
+        let data = read("testdata/wav_stereo/A_Tusk_is_used_to_make_costly_gifts.wav");
+        assert_eq!(detect_audio(&data), AudioType::Wav);
+    }
+
+    #[test]
+    fn detect_opus_from_testdata() {
+        let data = read("testdata/opus/A_Tusk_is_used_to_make_costly_gifts.opus");
+        assert_eq!(detect_audio(&data), AudioType::Opus);
+    }
+
+    #[test]
+    fn detect_ogg_opus_from_testdata() {
+        let data = read("testdata/ogg_opus/A_Tusk_is_used_to_make_costly_gifts.ogg");
+        assert_eq!(detect_audio(&data), AudioType::OggOpus);
     }
 }
