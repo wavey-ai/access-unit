@@ -63,6 +63,10 @@ pub fn detect_audio(data: &[u8]) -> AudioType {
     }
 }
 
+pub fn is_mp4(data: &[u8]) -> bool {
+    mp4::is_mp4(data)
+}
+
 fn is_wav(data: &[u8]) -> bool {
     data.len() >= 12 && &data[0..4] == b"RIFF" && &data[8..12] == b"WAVE"
 }
