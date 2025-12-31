@@ -4,8 +4,9 @@ pub mod aac;
 pub mod chunk;
 pub mod flac;
 pub mod h264;
-pub mod mp4;
 pub mod mp3;
+pub mod mp4;
+pub mod webm;
 
 pub const PSI_STREAM_MP3: u8 = 0x04; // ISO/IEC 13818-3 Audio
 pub const PSI_STREAM_PRIVATE_DATA: u8 = 0x06;
@@ -23,6 +24,7 @@ pub enum AudioType {
     OggOpus,
     Opus,
     Wav,
+    WebM,
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +52,8 @@ pub fn detect_audio(data: &[u8]) -> AudioType {
         AudioType::FLAC
     } else if aac::is_aac(data) {
         AudioType::AAC
+    } else if webm::is_webm(data) {
+        AudioType::WebM
     } else if is_ogg_opus(data) {
         AudioType::OggOpus
     } else if is_opus(data) {
@@ -65,6 +69,10 @@ pub fn detect_audio(data: &[u8]) -> AudioType {
 
 pub fn is_mp4(data: &[u8]) -> bool {
     mp4::is_mp4(data)
+}
+
+pub fn is_webm(data: &[u8]) -> bool {
+    webm::is_webm(data)
 }
 
 fn is_wav(data: &[u8]) -> bool {
@@ -146,5 +154,11 @@ mod tests {
     fn detect_ogg_opus_from_testdata() {
         let data = read("testdata/ogg_opus/A_Tusk_is_used_to_make_costly_gifts.ogg");
         assert_eq!(detect_audio(&data), AudioType::OggOpus);
+    }
+
+    #[test]
+    fn detect_webm_from_testdata() {
+        let data = read("testdata/webm/A_Tusk_is_used_to_make_costly_gifts.webm");
+        assert_eq!(detect_audio(&data), AudioType::WebM);
     }
 }
