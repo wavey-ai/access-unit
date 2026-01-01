@@ -5,6 +5,33 @@ pub fn is_mp4(data: &[u8]) -> bool {
     matches!(next_box(data, 0), Some((name, _, _)) if &name == b"ftyp")
 }
 
+/// Quick detection of M4A container via ftyp box.
+/// Works with moov at the end - only needs the first ~32 bytes.
+pub fn is_m4a(data: &[u8]) -> bool {
+    if let Some((name, content, _)) = next_box(data, 0) {
+        if &name != b"ftyp" || content.len() < 8 {
+            return false;
+        }
+        // Check major brand (first 4 bytes of content)
+        let major_brand = &content[0..4];
+        // Check compatible brands (after minor version, every 4 bytes)
+        let compatible_brands = &content[8..];
+
+        // Check if major brand indicates M4A
+        if major_brand == b"M4A " || major_brand == b"M4B " {
+            return true;
+        }
+
+        // Check compatible brands for M4A indicator
+        for chunk in compatible_brands.chunks_exact(4) {
+            if chunk == b"M4A " || chunk == b"M4B " {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Attempts to find the first audio track in the MP4 and map its sample entry to an `AudioType`.
 pub fn detect_audio_track(data: &[u8]) -> Option<AudioType> {
     if !is_mp4(data) {

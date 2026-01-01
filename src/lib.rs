@@ -18,7 +18,8 @@ pub const PSI_STREAM_AUDIO_OPUS: u8 = 0x9c;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AudioType {
     Unknown,
-    AAC,
+    AAC,  // Raw AAC (ADTS format)
+    M4A,  // AAC in MP4/M4A container
     FLAC,
     MP3,
     OggOpus,
@@ -46,9 +47,15 @@ pub struct AccessUnit {
 }
 
 pub fn detect_audio(data: &[u8]) -> AudioType {
+    // Quick M4A detection via ftyp box (works even with moov at end)
+    if mp4::is_m4a(data) {
+        return AudioType::M4A;
+    }
+    // Full MP4 parsing for other containers (MP4 with video, etc.)
     if let Some(audio_type) = mp4::detect_audio_track(data) {
-        audio_type
-    } else if flac::is_flac(data) {
+        return audio_type;
+    }
+    if flac::is_flac(data) {
         AudioType::FLAC
     } else if aac::is_aac(data) {
         AudioType::AAC
