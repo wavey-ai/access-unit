@@ -6,6 +6,7 @@ license = "MIT"
 description = "Minimal structs and helpers for working with audio and video byte streams"
 repository = "https://github.com/wavey-ai/access-unit"
 readme = "README.md"
+exclude = ["testdata/*"]
 
 [dependencies]
 bytes = "1.7.1"
