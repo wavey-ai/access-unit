@@ -272,6 +272,7 @@ pub fn create_streaminfo(frame_info: &FLACFrameInfo) -> Vec<u8> {
     streaminfo
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::fs::File;
