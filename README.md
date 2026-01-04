@@ -1,5 +1,7 @@
 # Access Unit
 
+[![CI](https://github.com/wavey-ai/access-unit/actions/workflows/ci.yml/badge.svg)](https://github.com/wavey-ai/access-unit/actions/workflows/ci.yml)
+
 A Rust library for handling audio codec frames, with support for AAC and FLAC formats. The library provides utilities for frame detection, parsing, and manipulation, with a focus on broadcast and streaming applications.
 
 ## Features

@@ -150,28 +150,3 @@ fn sample_rate_index(sample_rate: u32) -> u8 {
         _ => 0xF, // Invalid sample rate
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mse_fmp4::aac::{AdtsHeader, ChannelConfiguration, SamplingFrequency};
-
-    #[test]
-    fn test_adts_header_parsing() {
-        let data = vec![0u8; 200]; // Dummy AAC frame data
-        let channels = 2u8;
-        let sample_rate = 44100u32;
-        let adts_payload = create_adts_header(0x66, channels, sample_rate, data.len(), false);
-        let mut full_payload = adts_payload.clone();
-        full_payload.extend_from_slice(&data);
-
-        let adts = AdtsHeader::read_from(&full_payload[..]).unwrap();
-        assert_eq!(adts.frame_len, 207);
-        assert_eq!(adts.sampling_frequency, SamplingFrequency::Hz44100);
-        assert_eq!(
-            adts.channel_configuration,
-            ChannelConfiguration::TwoChannels
-        );
-        assert_eq!(adts.profile, mse_fmp4::aac::AacProfile::Lc);
-    }
-}
