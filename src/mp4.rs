@@ -164,7 +164,8 @@ fn next_box<'a>(data: &'a [u8], offset: usize) -> Option<([u8; 4], &'a [u8], usi
 
 fn fourcc_to_audio_type(code: [u8; 4]) -> AudioType {
     match &code {
-        b"mp4a" => AudioType::AAC,
+        b"mp4a" => AudioType::M4A,
+        b"alac" => AudioType::ALAC,
         b"fLaC" | b"FLAC" => AudioType::FLAC,
         b"Opus" | b"opus" => AudioType::Opus,
         b"mp3 " | b".mp3" => AudioType::MP3,
@@ -190,6 +191,40 @@ mod tests {
     #[test]
     fn extracts_audio_type() {
         let data = read("testdata/mp4/heat.mp4");
-        assert_eq!(detect_audio_track(&data), Some(AudioType::AAC));
+        assert_eq!(detect_audio_track(&data), Some(AudioType::M4A));
+    }
+
+    fn mp4_box(name: &[u8; 4], content: &[u8]) -> Vec<u8> {
+        let size = (content.len() + 8) as u32;
+        let mut out = Vec::with_capacity(size as usize);
+        out.extend_from_slice(&size.to_be_bytes());
+        out.extend_from_slice(name);
+        out.extend_from_slice(content);
+        out
+    }
+
+    fn minimal_mp4_audio(sample_entry: &[u8; 4]) -> Vec<u8> {
+        let ftyp = mp4_box(b"ftyp", b"M4A \0\0\0\0M4A ");
+
+        let mut stsd = Vec::new();
+        stsd.extend_from_slice(&[0, 0, 0, 0]);
+        stsd.extend_from_slice(&1u32.to_be_bytes());
+        stsd.extend_from_slice(&mp4_box(sample_entry, &[0; 8]));
+
+        let stbl = mp4_box(b"stbl", &mp4_box(b"stsd", &stsd));
+        let minf = mp4_box(b"minf", &stbl);
+        let mut hdlr_content = vec![0; 8];
+        hdlr_content.extend_from_slice(b"soun");
+        let mdia_content = [mp4_box(b"hdlr", &hdlr_content), minf].concat();
+        let trak = mp4_box(b"trak", &mp4_box(b"mdia", &mdia_content));
+        let moov = mp4_box(b"moov", &trak);
+
+        [ftyp, moov].concat()
+    }
+
+    #[test]
+    fn extracts_alac_audio_type() {
+        let data = minimal_mp4_audio(b"alac");
+        assert_eq!(detect_audio_track(&data), Some(AudioType::ALAC));
     }
 }

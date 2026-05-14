@@ -1,6 +1,6 @@
 [package]
 name = "access-unit"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 license = "MIT"
 description = "Minimal structs and helpers for working with audio and video byte streams"
@@ -10,4 +10,3 @@ exclude = ["testdata/*"]
 
 [dependencies]
 bytes = "1.7.1"
-
