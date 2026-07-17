@@ -142,16 +142,35 @@ pub fn decode_frame_header(input: &[u8]) -> Result<FLACFrameInfo, FLACError> {
 }
 
 fn read_utf8(reader: &mut BitReader) -> Result<u64, FLACError> {
-    let mut value = 0u64;
-
-    loop {
-        let byte = reader.read(8)? as u8;
-        value = (value << 7) | ((byte & 0x7F) as u64);
-        if (byte & 0x80) == 0 {
-            break;
-        }
+    let head = reader.read(8)? as u8;
+    if head & 0x80 == 0 {
+        return Ok(u64::from(head));
     }
 
+    let encoded_len = head.leading_ones() as usize;
+    if !(2..=7).contains(&encoded_len) {
+        return Err(FLACError::UTF8DecodingError);
+    }
+
+    let head_payload_bits = 7 - encoded_len;
+    let head_mask = if head_payload_bits == 0 {
+        0
+    } else {
+        (1_u8 << head_payload_bits) - 1
+    };
+    let mut value = u64::from(head & head_mask);
+    for _ in 1..encoded_len {
+        let continuation = reader.read(8)? as u8;
+        if continuation & 0xC0 != 0x80 {
+            return Err(FLACError::UTF8DecodingError);
+        }
+        value = (value << 6) | u64::from(continuation & 0x3F);
+    }
+
+    let minimum_value = 1_u64 << (5 * encoded_len - 4);
+    if value < minimum_value {
+        return Err(FLACError::UTF8DecodingError);
+    }
     Ok(value)
 }
 
@@ -299,6 +318,30 @@ mod tests {
         assert_eq!(frame_info.channels, 2);
         assert_eq!(frame_info.bps, 16);
         assert_eq!(frame_info.frame_or_sample_num, 0);
+    }
+
+    #[test]
+    fn decodes_flac_utf8_like_frame_numbers_without_consuming_header_fields() {
+        let cases: &[(&[u8], u64)] = &[
+            (&[0x00], 0),
+            (&[0x7f], 127),
+            (&[0xc2, 0x80], 128),
+            (&[0xdf, 0xbf], 2_047),
+            (&[0xe0, 0xa0, 0x80], 2_048),
+        ];
+        for (encoded, expected) in cases {
+            let mut reader = BitReader::new(encoded);
+            assert_eq!(read_utf8(&mut reader).unwrap(), *expected);
+            assert_eq!(reader.bit_position, encoded.len() * 8);
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_flac_utf8_like_frame_numbers() {
+        for encoded in [&[0x80][..], &[0xc2], &[0xc2, 0x41], &[0xc0, 0x80], &[0xff]] {
+            let mut reader = BitReader::new(encoded);
+            assert!(read_utf8(&mut reader).is_err(), "accepted {encoded:02x?}");
+        }
     }
 
     #[test]
