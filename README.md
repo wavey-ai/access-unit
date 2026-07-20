@@ -12,6 +12,7 @@ with a focus on broadcast and streaming applications.
 - AAC ADTS frame handling and validation
 - FLAC frame parsing and manipulation
 - MP3 frame header parsing and detection
+- Unambiguous H.264 AVCC and Annex-B framing detection
 - Support for FMP4 container format
 - Access Unit abstraction for media streaming
 
@@ -94,6 +95,21 @@ if aac::is_aac(data) {
 }
 ```
 
+### Detecting H.264 Framing
+
+```rust
+use access_unit::h264::{detect_framing, Framing};
+
+match detect_framing(data, 4) {
+    Some(Framing::Avcc) => println!("four-byte length-prefixed AVCC sample"),
+    Some(Framing::AnnexB) => println!("Annex-B start-code sample"),
+    None => println!("invalid or unsupported H.264 framing"),
+}
+```
+
+AVCC validation is performed before Annex-B detection. This avoids treating a
+valid NAL-unit length such as `00 00 01 10` as an Annex-B start code.
+
 ### FLAC Frame Handling
 
 ```rust
@@ -132,7 +148,7 @@ let unit = AccessUnit {
     pts: 0,
     dts: 0,
     data: data_bytes,
-    avc: false,
+    stream_type: access_unit::PSI_STREAM_H264,
     id: 1234
 };
 ```
