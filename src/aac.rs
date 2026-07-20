@@ -1,5 +1,77 @@
 use bytes::{Bytes, BytesMut};
 
+/// Structural information for one ADTS AAC frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AdtsFrameInfo {
+    pub frame_length: usize,
+    pub header_length: usize,
+    pub sample_rate: u32,
+    pub samples: u32,
+}
+
+/// Parse one ADTS frame header and verify that its complete frame is present.
+pub fn parse_adts_frame(input: &[u8]) -> Option<AdtsFrameInfo> {
+    if input.len() < 7 || input[0] != 0xff || input[1] & 0xf6 != 0xf0 {
+        return None;
+    }
+    let sampling_frequency_index = (input[2] >> 2) & 0x0f;
+    let sample_rate = adts_sample_rate(sampling_frequency_index)?;
+    let header_length = if input[1] & 0x01 != 0 { 7 } else { 9 };
+    if input.len() < header_length {
+        return None;
+    }
+    let frame_length = (usize::from(input[3] & 0x03) << 11)
+        | (usize::from(input[4]) << 3)
+        | (usize::from(input[5]) >> 5);
+    if frame_length < header_length || frame_length > input.len() {
+        return None;
+    }
+    let raw_data_blocks = u32::from(input[6] & 0x03) + 1;
+    Some(AdtsFrameInfo {
+        frame_length,
+        header_length,
+        sample_rate,
+        samples: 1_024 * raw_data_blocks,
+    })
+}
+
+/// Split a buffer containing one or more complete ADTS frames without copying
+/// their payload bytes. Returns `None` for truncation, garbage, or trailing
+/// partial data.
+pub fn split_adts_frames(data: Bytes) -> Option<Vec<Bytes>> {
+    if data.is_empty() {
+        return None;
+    }
+    let mut frames = Vec::new();
+    let mut offset = 0usize;
+    while offset < data.len() {
+        let info = parse_adts_frame(&data[offset..])?;
+        let end = offset.checked_add(info.frame_length)?;
+        frames.push(data.slice(offset..end));
+        offset = end;
+    }
+    Some(frames)
+}
+
+fn adts_sample_rate(index: u8) -> Option<u32> {
+    Some(match index {
+        0 => 96_000,
+        1 => 88_200,
+        2 => 64_000,
+        3 => 48_000,
+        4 => 44_100,
+        5 => 32_000,
+        6 => 24_000,
+        7 => 22_050,
+        8 => 16_000,
+        9 => 12_000,
+        10 => 11_025,
+        11 => 8_000,
+        12 => 7_350,
+        _ => return None,
+    })
+}
+
 pub fn is_aac(input: &[u8]) -> bool {
     // Check if we have at least 7 bytes (minimum ADTS header size)
     if input.len() < 7 {
@@ -148,5 +220,45 @@ fn sample_rate_index(sample_rate: u32) -> u8 {
         8000 => 0xB,
         7350 => 0xC,
         _ => 0xF, // Invalid sample rate
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_and_splits_multiple_complete_adts_frames() {
+        let first_payload = vec![0x11; 31];
+        let second_payload = vec![0x22; 47];
+        let mut encoded = create_adts_header(0x66, 2, 48_000, first_payload.len(), false);
+        encoded.extend_from_slice(&first_payload);
+        encoded.extend_from_slice(&create_adts_header(
+            0x66,
+            2,
+            48_000,
+            second_payload.len(),
+            false,
+        ));
+        encoded.extend_from_slice(&second_payload);
+
+        let frames = split_adts_frames(Bytes::from(encoded)).unwrap();
+        assert_eq!(frames.len(), 2);
+        assert_eq!(parse_adts_frame(&frames[0]).unwrap().sample_rate, 48_000);
+        assert_eq!(parse_adts_frame(&frames[0]).unwrap().samples, 1_024);
+        assert_eq!(frames[0].len(), 7 + first_payload.len());
+        assert_eq!(frames[1].len(), 7 + second_payload.len());
+    }
+
+    #[test]
+    fn rejects_partial_or_trailing_adts_data() {
+        let mut frame = create_adts_header(0x66, 2, 48_000, 8, false);
+        frame.extend_from_slice(&[0; 7]);
+        assert!(split_adts_frames(Bytes::from(frame)).is_none());
+
+        let mut frame = create_adts_header(0x66, 2, 48_000, 1, false);
+        frame.push(0xaa);
+        frame.push(0xff);
+        assert!(split_adts_frames(Bytes::from(frame)).is_none());
     }
 }

@@ -21,6 +21,7 @@ with a focus on broadcast and streaming applications.
 ### AAC Support
 
 - ADTS header parsing and validation
+- Zero-copy splitting of multi-frame ADTS buffers
 - Frame extraction and manipulation
 - Support for common profiles (AAC-LC, HE-AAC v1/v2)
 - Sample rate detection and validation
