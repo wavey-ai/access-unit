@@ -1,7 +1,9 @@
 use bytes::Bytes;
 
 pub mod aac;
+pub mod bluray;
 pub mod chunk;
+pub mod dts;
 pub mod flac;
 pub mod h264;
 pub mod mp3;
