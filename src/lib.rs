@@ -6,6 +6,7 @@ pub mod chunk;
 pub mod dts;
 pub mod flac;
 pub mod h264;
+pub mod mpegts;
 pub mod mp3;
 pub mod mp4;
 pub mod webm;
@@ -33,6 +34,13 @@ pub enum AudioType {
     ALAC,
     AIFF,
     AC3,
+    /// Matroska (MKV): EBML with DocType "matroska".
+    Matroska,
+    /// MPEG transport stream: fixed 188/192/204-byte packets opening `0x47`.
+    MpegTs,
+    /// Fragmented MP4 (CMAF/DASH): an init segment with `mvex`, or a media
+    /// segment opening `styp`, or a `moof`.
+    FragmentedMp4,
 }
 
 #[derive(Debug, Clone)]
@@ -54,11 +62,21 @@ pub struct AccessUnit {
 }
 
 pub fn detect_audio(data: &[u8]) -> AudioType {
+    // Fragmented MP4 is checked before the whole-file MP4 read: an fMP4 init
+    // segment also carries a moov, so reading it as a plain M4A would route a
+    // fragmented stream to the wrong decoder. A media segment opens `styp`
+    // and is not an MP4 at all.
+    if mp4::is_fragmented(data) {
+        return AudioType::FragmentedMp4;
+    }
     // Parse MP4 sample entries before falling back to raw/container signatures.
     // A bare ftyp/M4A brand is not enough to know whether the audio is AAC,
     // ALAC, or another codec.
     if let Some(audio_type) = mp4::detect_audio_track(data) {
         return audio_type;
+    }
+    if mpegts::is_mpeg_ts(data) {
+        return AudioType::MpegTs;
     }
     if is_caf_alac(data) {
         AudioType::ALAC
@@ -68,6 +86,8 @@ pub fn detect_audio(data: &[u8]) -> AudioType {
         AudioType::AAC
     } else if webm::is_webm(data) {
         AudioType::WebM
+    } else if webm::is_matroska(data) {
+        AudioType::Matroska
     } else if is_ogg_opus(data) {
         AudioType::OggOpus
     } else if is_ogg_vorbis(data) {
@@ -266,5 +286,35 @@ mod tests {
     fn detect_raw_ac3_syncframe() {
         let data = [0x0b, 0x77, 0x00, 0x00, 0x00];
         assert_eq!(detect_audio(&data), AudioType::AC3);
+    }
+
+    #[test]
+    fn detect_matroska_signature() {
+        let mut data = b"\x1A\x45\xDF\xA3".to_vec();
+        data.extend_from_slice(b"\x01\x00\x00\x00matroska");
+        assert_eq!(detect_audio(&data), AudioType::Matroska);
+    }
+
+    #[test]
+    fn detect_mpeg_ts_packets() {
+        let mut data = vec![0u8; 188 * 3];
+        data[0] = 0x47;
+        data[188] = 0x47;
+        data[376] = 0x47;
+        assert_eq!(detect_audio(&data), AudioType::MpegTs);
+    }
+
+    #[test]
+    fn detect_fragmented_mp4_init() {
+        fn boxed(name: &[u8; 4], content: &[u8]) -> Vec<u8> {
+            let mut out = ((content.len() + 8) as u32).to_be_bytes().to_vec();
+            out.extend_from_slice(name);
+            out.extend_from_slice(content);
+            out
+        }
+        let ftyp = boxed(b"ftyp", b"isom\0\0\0\0iso6");
+        let moov = boxed(b"moov", &boxed(b"mvex", &[]));
+        let data = [ftyp, moov].concat();
+        assert_eq!(detect_audio(&data), AudioType::FragmentedMp4);
     }
 }

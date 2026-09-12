@@ -32,6 +32,58 @@ pub fn is_m4a(data: &[u8]) -> bool {
     false
 }
 
+/// Brands that mark a fragmented MP4 (CMAF/DASH) rather than a whole-file one.
+const FRAGMENTED_BRANDS: [&[u8; 4]; 9] = [
+    b"dash", b"iso5", b"iso6", b"cmfc", b"cmff", b"cmfl", b"cmfs", b"msdh", b"msix",
+];
+
+fn is_fragmented_brand(brand: &[u8]) -> bool {
+    FRAGMENTED_BRANDS.iter().any(|known| known.as_slice() == brand)
+}
+
+/// True when the data is a fragmented MP4 — an init segment or a media
+/// segment.
+///
+/// A whole-file MP4 and an fMP4 init segment both open `ftyp` with a `moov`,
+/// so the brand, a `mvex` in the movie box, or a `moof` is what tells them
+/// apart. A media segment opens `styp`, which no whole-file MP4 does.
+pub fn is_fragmented(data: &[u8]) -> bool {
+    let Some((first, ftyp, _)) = next_box(data, 0) else {
+        return false;
+    };
+    if &first == b"styp" {
+        return true;
+    }
+    if &first != b"ftyp" {
+        return false;
+    }
+    if ftyp.len() >= 8 {
+        if is_fragmented_brand(&ftyp[0..4]) {
+            return true;
+        }
+        if ftyp[8..]
+            .chunks_exact(4)
+            .any(|brand| is_fragmented_brand(brand))
+        {
+            return true;
+        }
+    }
+    let mut offset = 0;
+    while let Some((name, content, next)) = next_box(data, offset) {
+        match &name {
+            b"moof" => return true,
+            b"moov" => {
+                if find_child(content, *b"mvex").is_some() {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        offset = next;
+    }
+    false
+}
+
 /// Attempts to find the first audio track in the MP4 and map its sample entry to an `AudioType`.
 pub fn detect_audio_track(data: &[u8]) -> Option<AudioType> {
     if !is_mp4(data) {
@@ -226,5 +278,31 @@ mod tests {
     fn extracts_alac_audio_type() {
         let data = minimal_mp4_audio(b"alac");
         assert_eq!(detect_audio_track(&data), Some(AudioType::ALAC));
+    }
+
+    #[test]
+    fn a_whole_file_mp4_is_not_fragmented() {
+        let data = minimal_mp4_audio(b"mp4a");
+        assert!(!is_fragmented(&data));
+    }
+
+    #[test]
+    fn an_init_segment_with_mvex_is_fragmented() {
+        let ftyp = mp4_box(b"ftyp", b"isom\0\0\0\0isomiso5");
+        let moov = mp4_box(b"moov", &mp4_box(b"mvex", &[]));
+        let data = [ftyp, moov].concat();
+        assert!(is_fragmented(&data));
+    }
+
+    #[test]
+    fn a_media_segment_opening_styp_is_fragmented() {
+        let data = mp4_box(b"styp", b"msdh\0\0\0\0msdh");
+        assert!(is_fragmented(&data));
+    }
+
+    #[test]
+    fn a_fragmented_ftyp_brand_is_fragmented() {
+        let data = mp4_box(b"ftyp", b"dash\0\0\0\0dash");
+        assert!(is_fragmented(&data));
     }
 }
